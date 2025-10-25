@@ -5,24 +5,37 @@ const UserSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   passwordHash: {
     type: String,
-    required: true
+    required: true,
   },
-  pokemon: [{
-    pokemonId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Pokemon',
-      required: true
+  pokemon: [
+    {
+      pokemonId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Pokemon',
+        required: true,
+      },
+      level: {
+        type: Number,
+        default: 1,
+        required: true,
+      },
     },
-    level: {
-      type: Number,
-      default: 1,
-      required: true
-    }
-  }]
+  ],
+  // Wallet-first identity fields
+  address: {
+    type: String,
+    sparse: true, // Allow null but enforce uniqueness when set
+    lowercase: true,
+    index: true,
+  },
+  basename: {
+    type: String,
+    default: null,
+  },
 });
 
 // Remove sensitive fields when converting to JSON
@@ -33,7 +46,7 @@ UserSchema.set('toJSON', {
     delete ret.__v;
     delete ret.passwordHash;
     return ret;
-  }
+  },
 });
 
 module.exports = mongoose.model('User', UserSchema);

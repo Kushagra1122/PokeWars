@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const MainGameinJs = ({ gameState, user }) => {
   const [mapData, setMapData] = useState(null);
@@ -13,17 +13,15 @@ const MainGameinJs = ({ gameState, user }) => {
   // Cache player images to avoid reloading every render
   const playerImagesRef = useRef({});
 
-  useEffect(() => {
-    loadMapData();
-  }, [selectedMap]);
-
-  const loadMapData = async () => {
+  const loadMapData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
       // Load map JSON
-      const mapResponse = await fetch(`/maps/${selectedMap}/${selectedMap}.json`);
+      const mapResponse = await fetch(
+        `/maps/${selectedMap}/${selectedMap}.json`,
+      );
       if (!mapResponse.ok) {
         throw new Error(`Failed to load map: ${selectedMap}`);
       }
@@ -44,96 +42,118 @@ const MainGameinJs = ({ gameState, user }) => {
       setError(err.message);
       setLoading(false);
     }
-  };
+  }, [selectedMap]);
 
-  const renderTile = (ctx, tileId, x, y, tileSize, scaleX, scaleY) => {
-    if (!tilesetImage || tileId === 0) return;
+  useEffect(() => {
+    loadMapData();
+  }, [loadMapData]);
 
-    const tilesetColumns = 8; // adjust based on your tileset
-    const tileIndex = tileId - 1;
-    
-    const sourceX = (tileIndex % tilesetColumns) * tileSize;
-    const sourceY = Math.floor(tileIndex / tilesetColumns) * tileSize;
+  const renderTile = useCallback(
+    (ctx, tileId, x, y, tileSize, scaleX, scaleY) => {
+      if (!tilesetImage || tileId === 0) return;
 
-    ctx.drawImage(
-      tilesetImage,
-      sourceX, sourceY, tileSize, tileSize,
-      x * tileSize * scaleX, y * tileSize * scaleY, tileSize * scaleX, tileSize * scaleY
-    );
-  };
+      const tilesetColumns = 8; // adjust based on your tileset
+      const tileIndex = tileId - 1;
 
-  const renderPlayers = (ctx, scaleX, scaleY) => {
-    if (!gameState?.players || !user) return;
+      const sourceX = (tileIndex % tilesetColumns) * tileSize;
+      const sourceY = Math.floor(tileIndex / tilesetColumns) * tileSize;
 
-    // Separate current user from other players
-    const currentUserPlayer = gameState.players.find(player => player.id === user.id);
-    const otherPlayers = gameState.players.filter(player => player.id !== user.id);
+      ctx.drawImage(
+        tilesetImage,
+        sourceX,
+        sourceY,
+        tileSize,
+        tileSize,
+        x * tileSize * scaleX,
+        y * tileSize * scaleY,
+        tileSize * scaleX,
+        tileSize * scaleY,
+      );
+    },
+    [tilesetImage],
+  );
 
-    // Render other players first (in background)
-    otherPlayers.forEach(player => {
-      renderPlayerSprite(ctx, player, scaleX, scaleY, false);
-    });
+  const renderPlayers = useCallback(
+    (ctx, scaleX, scaleY) => {
+      if (!gameState?.players || !user) return;
 
-    // Render current user on top (foreground)
-    if (currentUserPlayer) {
-      renderPlayerSprite(ctx, currentUserPlayer, scaleX, scaleY, true);
-    }
-  };
+      // Separate current user from other players
+      const currentUserPlayer = gameState.players.find(
+        (player) => player.id === user.id,
+      );
+      const otherPlayers = gameState.players.filter(
+        (player) => player.id !== user.id,
+      );
 
-  const renderPlayerSprite = (ctx, player, scaleX, scaleY, isCurrentUser) => {
-    const { position, selectedPokemonDetails, id, name } = player;
-    const { sprite } = selectedPokemonDetails;
-    const { baseStats } = selectedPokemonDetails;
+      // Render other players first (in background)
+      otherPlayers.forEach((player) => {
+        renderPlayerSprite(ctx, player, scaleX, scaleY, false);
+      });
 
-    if (!sprite) return;
-
-    // Load player sprite once
-    if (!playerImagesRef.current[sprite]) {
-      const img = new Image();
-      img.src = sprite;
-      playerImagesRef.current[sprite] = img;
-    }
-
-    const img = playerImagesRef.current[sprite];
-    const drawImage = () => {
-      const x = position.x * mapData.tilewidth * scaleX;
-      const y = position.y * mapData.tileheight * scaleY;
-      const width = mapData.tilewidth * scaleX;
-      const height = mapData.tileheight * scaleY;
-
-      // Draw the player sprite
-      ctx.drawImage(img, x, y, width, height);
-
-      // Add visual indicator for current user
-      if (isCurrentUser) {
-        // Add name tag with background for current user
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x - 10, y - 20, width + 20, 15);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${name} (You)`, x + width/2, y - 8);
-      } else {
-        // Add name tag for other players
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x - 10, y - 20, width + 20, 15);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(name, x + width/2, y - 8);
+      // Render current user on top (foreground)
+      if (currentUserPlayer) {
+        renderPlayerSprite(ctx, currentUserPlayer, scaleX, scaleY, true);
       }
-    };
+    },
+    [gameState, user, renderPlayerSprite],
+  );
 
-    if (img.complete) {
-      drawImage();
-    } else {
-      img.onload = drawImage;
-    }
-  };
+  const renderPlayerSprite = useCallback(
+    (ctx, player, scaleX, scaleY, isCurrentUser) => {
+      const { position, selectedPokemonDetails, name } = player;
+      const { sprite } = selectedPokemonDetails;
 
-  const renderMap = () => {
+      if (!sprite) return;
+
+      // Load player sprite once
+      if (!playerImagesRef.current[sprite]) {
+        const img = new Image();
+        img.src = sprite;
+        playerImagesRef.current[sprite] = img;
+      }
+
+      const img = playerImagesRef.current[sprite];
+      const drawImage = () => {
+        const x = position.x * mapData.tilewidth * scaleX;
+        const y = position.y * mapData.tileheight * scaleY;
+        const width = mapData.tilewidth * scaleX;
+        const height = mapData.tileheight * scaleY;
+
+        // Draw the player sprite
+        ctx.drawImage(img, x, y, width, height);
+
+        // Add visual indicator for current user
+        if (isCurrentUser) {
+          // Add name tag with background for current user
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(x - 10, y - 20, width + 20, 15);
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '10px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${name} (You)`, x + width / 2, y - 8);
+        } else {
+          // Add name tag for other players
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(x - 10, y - 20, width + 20, 15);
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '10px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(name, x + width / 2, y - 8);
+        }
+      };
+
+      if (img.complete) {
+        drawImage();
+      } else {
+        img.onload = drawImage;
+      }
+    },
+    [mapData],
+  );
+
+  const renderMap = useCallback(() => {
     if (!mapData || !tilesetImage || !containerRef.current || !user) return;
 
     const canvas = canvasRef.current;
@@ -142,7 +162,7 @@ const MainGameinJs = ({ gameState, user }) => {
 
     // Canvas full size
     canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight+300;
+    canvas.height = container.clientHeight + 300;
 
     // Background
     ctx.fillStyle = '#87CEEB';
@@ -152,7 +172,7 @@ const MainGameinJs = ({ gameState, user }) => {
     const scaleY = canvas.height / (mapData.height * mapData.tileheight);
 
     // Draw tiles
-    mapData.layers.forEach(layer => {
+    mapData.layers.forEach((layer) => {
       if (layer.visible && layer.type === 'tilelayer') {
         for (let y = 0; y < layer.height; y++) {
           for (let x = 0; x < layer.width; x++) {
@@ -166,20 +186,19 @@ const MainGameinJs = ({ gameState, user }) => {
 
     // Draw players
     renderPlayers(ctx, scaleX, scaleY);
-  };
+  }, [mapData, tilesetImage, user, renderTile, renderPlayers]);
 
   useEffect(() => {
-    if (canvasRef.current && mapData && tilesetImage && containerRef.current && user) {
-      renderMap();
-    }
-  }, [mapData, tilesetImage, containerRef.current, gameState, user]);
+    // renderMap itself checks required conditions (mapData, tilesetImage, user, refs)
+    renderMap();
+  }, [renderMap]);
 
   // Resize handler
   useEffect(() => {
     const handleResize = () => renderMap();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [mapData, tilesetImage, gameState, user]);
+  }, [renderMap]);
 
   if (loading) {
     return (
@@ -189,7 +208,8 @@ const MainGameinJs = ({ gameState, user }) => {
         </div>
         <div className="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin mb-4"></div>
         <div className="text-white text-sm opacity-80">
-          Map Size: {mapData ? `${mapData.width} × ${mapData.height}` : 'Loading...'}
+          Map Size:{' '}
+          {mapData ? `${mapData.width} × ${mapData.height}` : 'Loading...'}
         </div>
       </div>
     );
@@ -203,9 +223,7 @@ const MainGameinJs = ({ gameState, user }) => {
           <div className="text-xl font-bold text-white mb-2">
             Map Loading Failed
           </div>
-          <div className="text-white/90 mb-6">
-            {error}
-          </div>
+          <div className="text-white/90 mb-6">{error}</div>
           <button
             onClick={loadMapData}
             className="bg-white text-red-600 hover:bg-gray-100 px-6 py-3 rounded-lg transition-all font-semibold shadow-lg"

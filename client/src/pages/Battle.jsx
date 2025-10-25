@@ -1,50 +1,52 @@
-import React, { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { io } from "socket.io-client";
-import AuthContext from "../context/AuthContext";
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
+import AuthContext from '../context/AuthContext';
+import { WalletButton } from '../components/Wallet/WalletButton';
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
 let socket;
 
 const Battle = () => {
   const navigate = useNavigate();
-  const [lobbyCode, setLobbyCode] = useState("");
+  const [lobbyCode, setLobbyCode] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [error, setError] = useState("");
-  const { user ,selectedPokemon} = useContext(AuthContext);
+  const [error, setError] = useState('');
+  const { user, selectedPokemon } = useContext(AuthContext);
   useEffect(() => {
-
     if (!socket) {
-      socket = io(API_BASE, { transports: ["websocket", "polling"] });
-      console.log("🔌 Socket connected to:", API_BASE);
+      socket = io(API_BASE, { transports: ['websocket', 'polling'] });
+      console.log('🔌 Socket connected to:', API_BASE);
     }
 
-    socket.on("connect", () => console.log("✅ Socket connected:", socket.id));
-    socket.on("disconnect", (reason) => console.log("🔌 Socket disconnected:", reason));
-    socket.on("lobbyError", (msg) => {
-      console.log("❌ Lobby error:", msg);
+    socket.on('connect', () => console.log('✅ Socket connected:', socket.id));
+    socket.on('disconnect', (reason) =>
+      console.log('🔌 Socket disconnected:', reason),
+    );
+    socket.on('lobbyError', (msg) => {
+      console.log('❌ Lobby error:', msg);
       setError(msg);
     });
 
     return () => {
-      socket.off("lobbyError");
-      socket.off("connect");
-      socket.off("disconnect");
+      socket.off('lobbyError');
+      socket.off('connect');
+      socket.off('disconnect');
     };
   }, [user]);
 
   const handleCreateLobby = async () => {
-    if (!user) return setError("Please log in first!");
+    if (!user) return setError('Please log in first!');
     setCreating(true);
-    setError("");
+    setError('');
 
     try {
-      console.log("📝 Creating lobby for:", user.name);
+      console.log('📝 Creating lobby for:', user.name);
 
       const res = await fetch(`${API_BASE}/api/lobby`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           creatorId: user.id,
           creatorName: user.name,
@@ -55,36 +57,38 @@ const Battle = () => {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
-      console.log("✅ Lobby created:", data.code);
+      console.log('✅ Lobby created:', data.code);
       navigate(`/battle/lobby/${data.code}`);
     } catch (err) {
-      console.error("❌ Lobby creation error:", err);
-      setError("Failed to create lobby.");
+      console.error('❌ Lobby creation error:', err);
+      setError('Failed to create lobby.');
     } finally {
       setCreating(false);
     }
   };
 
   const handleJoinLobby = async () => {
-    if (!user) return setError("Please log in first!");
-    if (!lobbyCode.trim()) return setError("Enter a lobby code!");
+    if (!user) return setError('Please log in first!');
+    if (!lobbyCode.trim()) return setError('Enter a lobby code!');
 
     setJoining(true);
-    setError("");
+    setError('');
     const code = lobbyCode.trim().toUpperCase();
 
     try {
-      console.log("🚪 Validating lobby:", code);
-      const res = await fetch(`${API_BASE}/api/lobby/${encodeURIComponent(code)}`);
+      console.log('🚪 Validating lobby:', code);
+      const res = await fetch(
+        `${API_BASE}/api/lobby/${encodeURIComponent(code)}`,
+      );
 
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
-      console.log("✅ Lobby found:", data);
+      console.log('✅ Lobby found:', data);
       navigate(`/battle/lobby/${code}`);
     } catch (err) {
-      console.error("❌ Join lobby error:", err);
-      setError("Lobby not found or invalid code.");
+      console.error('❌ Join lobby error:', err);
+      setError('Lobby not found or invalid code.');
     } finally {
       setJoining(false);
     }
@@ -92,9 +96,14 @@ const Battle = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-purple-800 to-blue-800 p-8">
+      {/* Wallet button in top right */}
+      <div className="absolute top-6 right-6">
+        <WalletButton />
+      </div>
+
       <h1
         className="text-4xl md:text-5xl font-extrabold text-yellow-400 mb-10 text-center drop-shadow-lg"
-        style={{ fontFamily: "Press Start 2P, cursive" }}
+        style={{ fontFamily: 'Press Start 2P, cursive' }}
       >
         Battle Lobby
       </h1>
@@ -105,7 +114,7 @@ const Battle = () => {
           disabled={creating || !user}
           className="w-full py-4 bg-yellow-400 text-blue-900 font-bold rounded-xl hover:bg-yellow-300 hover:scale-105 shadow-lg transition-all disabled:opacity-50"
         >
-          {creating ? "Creating..." : "Create Lobby"}
+          {creating ? 'Creating...' : 'Create Lobby'}
         </button>
 
         <div className="text-yellow-200 font-bold">OR</div>
@@ -123,14 +132,16 @@ const Battle = () => {
           disabled={joining || !user}
           className="w-full py-3 bg-yellow-400 text-blue-900 font-bold rounded-xl hover:bg-yellow-300 hover:scale-105 shadow-lg transition-all disabled:opacity-50"
         >
-          {joining ? "Joining..." : "Join Lobby"}
+          {joining ? 'Joining...' : 'Join Lobby'}
         </button>
 
-        {!user && <p className="text-red-300 font-bold text-center">Login required</p>}
+        {!user && (
+          <p className="text-red-300 font-bold text-center">Login required</p>
+        )}
         {error && <p className="text-red-300 font-bold text-center">{error}</p>}
       </div>
     </div>
   );
 };
 
-export default Battle; 
+export default Battle;
