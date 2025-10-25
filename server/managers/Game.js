@@ -24,7 +24,12 @@ class Game {
       health: 100,
       position: spawnPositions[index] || { x: 0, y: 0 },
       direction: 'down',
-      isOnline: true
+      isOnline: true,
+      stats: {
+        kills: 0,
+        deaths: 0,
+        score: 0
+      }
     }));
   }
 
@@ -85,9 +90,25 @@ class Game {
       player.health = 100; // Full health on respawn
       player.position = newPosition; // New spawn position
       player.direction = 'down'; // Reset direction
-      console.log(`✅ ${player.name} respawned at (${newPosition.x}, ${newPosition.y}) with ${player.health}HP`);
+      player.stats.deaths += 1; // Increment death count
+      player.stats.score = this.calculateScore(player); // Update score
+      console.log(`✅ ${player.name} respawned at (${newPosition.x}, ${newPosition.y}) with ${player.health}HP (Deaths: ${player.stats.deaths})`);
     }
     return player;
+  }
+
+  addKill(killerId, victimId) {
+    const killer = this.getPlayer(killerId);
+    if (killer) {
+      killer.stats.kills += 1;
+      killer.stats.score = this.calculateScore(killer);
+      console.log(`💀 ${killer.name} killed a player! (Kills: ${killer.stats.kills})`);
+    }
+  }
+
+  calculateScore(player) {
+    // Score calculation: kills * 10 - deaths * 5
+    return (player.stats.kills * 10) - (player.stats.deaths * 5);
   }
 
   updatePlayerConnection(playerId, socketId, isOnline) {

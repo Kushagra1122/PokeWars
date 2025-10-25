@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import AuthContext from '../context/AuthContext';
 import { WalletButton } from '../components/Wallet/WalletButton';
+import { Plus, LogIn, Zap, Home } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
 let socket;
@@ -95,50 +96,131 @@ const Battle = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-purple-800 to-blue-800 p-8">
-      {/* Wallet button in top right */}
-      <div className="absolute top-6 right-6">
-        <WalletButton />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div className="absolute top-10 left-10 w-20 h-20 bg-yellow-400 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-16 h-16 bg-blue-400 rounded-full blur-xl animate-pulse delay-75"></div>
+        <div className="absolute bottom-20 left-1/3 w-24 h-24 bg-purple-400 rounded-full blur-xl animate-pulse delay-150"></div>
       </div>
 
-      <h1
-        className="text-4xl md:text-5xl font-extrabold text-yellow-400 mb-10 text-center drop-shadow-lg"
-        style={{ fontFamily: 'Press Start 2P, cursive' }}
-      >
-        Battle Lobby
-      </h1>
+      {/* Header */}
+      <div className="relative z-10">
+        <div className="flex justify-between items-center p-6 max-w-7xl mx-auto">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 hover:scale-110"
+            title="Back to Dashboard"
+          >
+            <Home className="w-5 h-5" />
+          </button>
 
-      <div className="flex flex-col items-center gap-6 w-full max-w-md">
-        <button
-          onClick={handleCreateLobby}
-          disabled={creating || !user}
-          className="w-full py-4 bg-yellow-400 text-blue-900 font-bold rounded-xl hover:bg-yellow-300 hover:scale-105 shadow-lg transition-all disabled:opacity-50"
-        >
-          {creating ? 'Creating...' : 'Create Lobby'}
-        </button>
+          <h1 className="text-3xl md:text-4xl font-black text-white">
+            Battle <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">Arena</span>
+          </h1>
 
-        <div className="text-yellow-200 font-bold">OR</div>
+          <WalletButton />
+        </div>
+      </div>
 
-        <input
-          type="text"
-          value={lobbyCode}
-          onChange={(e) => setLobbyCode(e.target.value)}
-          placeholder="Enter Lobby Code"
-          className="w-full px-4 py-3 rounded-xl text-blue-900 font-bold placeholder-yellow-300 bg-yellow-400/20 border border-yellow-400 focus:ring-2 focus:ring-yellow-400 transition"
-        />
+      {/* Main Content */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] px-6 py-12">
+        <div className="w-full max-w-2xl">
+          {/* Subtitle */}
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+              Create or Join a Battle
+            </h2>
+            <p className="text-gray-300 text-lg">
+              Challenge other trainers in thrilling Pokémon battles
+            </p>
+          </div>
 
-        <button
-          onClick={handleJoinLobby}
-          disabled={joining || !user}
-          className="w-full py-3 bg-yellow-400 text-blue-900 font-bold rounded-xl hover:bg-yellow-300 hover:scale-105 shadow-lg transition-all disabled:opacity-50"
-        >
-          {joining ? 'Joining...' : 'Join Lobby'}
-        </button>
+          {/* Main Card Container */}
+          <div className="space-y-6">
+            {/* Create Lobby Card */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-300">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center">
+                  <Plus className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Create Lobby</h3>
+                  <p className="text-gray-400 text-sm">Be the host and wait for challengers</p>
+                </div>
+              </div>
 
-        {!user && (
-          <p className="text-red-300 font-bold text-center">Login required</p>
-        )}
-        {error && <p className="text-red-300 font-bold text-center">{error}</p>}
+              <button
+                onClick={handleCreateLobby}
+                disabled={creating || !user}
+                className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-2xl hover:shadow-lg hover:scale-105 shadow-lg transition-all duration-300 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Zap className="w-5 h-5" />
+                {creating ? 'Creating Battle Lobby...' : 'Create New Lobby'}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+              <span className="text-white/60 font-semibold text-sm px-4">OR</span>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+            </div>
+
+            {/* Join Lobby Card */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-300">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center">
+                  <LogIn className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Join Lobby</h3>
+                  <p className="text-gray-400 text-sm">Enter a code to join an existing battle</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={lobbyCode}
+                  onChange={(e) => setLobbyCode(e.target.value.toUpperCase())}
+                  placeholder="Enter Lobby Code (e.g., ABC123)"
+                  className="w-full px-6 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-semibold placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                />
+
+                <button
+                  onClick={handleJoinLobby}
+                  disabled={joining || !user}
+                  className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-2xl hover:shadow-lg hover:scale-105 shadow-lg transition-all duration-300 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <Zap className="w-5 h-5" />
+                  {joining ? 'Joining Battle...' : 'Join Lobby'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Error Messages */}
+          {error && (
+            <div className="mt-6 p-4 bg-rose-500/20 backdrop-blur-sm border border-rose-500/30 rounded-2xl text-rose-300 text-center font-semibold">
+              {error}
+            </div>
+          )}
+
+          {/* Login Required Message */}
+          {!user && (
+            <div className="mt-6 p-4 bg-amber-500/20 backdrop-blur-sm border border-amber-500/30 rounded-2xl text-amber-300 text-center font-semibold">
+              ⚠️ Please log in to access battles
+            </div>
+          )}
+
+          {/* Info Footer */}
+          <div className="mt-12 text-center">
+            <p className="text-gray-400 text-sm">
+              Ready to prove your skills? Create a lobby or join your friend's battle!
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

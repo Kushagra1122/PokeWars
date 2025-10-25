@@ -60,7 +60,7 @@ class GameManager {
     this.io.to(gameCode).emit("playerMoved", { playerId, x, y });
   }
 
-  handlePlayerHealthUpdate(gameCode, playerId, newHealth) {
+  handlePlayerHealthUpdate(gameCode, playerId, newHealth, shooterId = null) {
     const game = this.getGame(gameCode);
     if (!game) return;
 
@@ -76,11 +76,11 @@ class GameManager {
 
     if (player.health <= 0) {
       console.log(`💀 Player ${player.name} health reached 0 - triggering defeat`);
-      this.handlePlayerDefeated(gameCode, playerId);
+      this.handlePlayerDefeated(gameCode, playerId, shooterId);
     }
   }
 
-  handlePlayerDefeated(gameCode, playerId) {
+  handlePlayerDefeated(gameCode, playerId, killerId = null) {
     const game = this.getGame(gameCode);
     if (!game) return;
 
@@ -89,9 +89,15 @@ class GameManager {
 
     console.log(`💀 Player ${defeatedPlayer.name} defeated in game ${gameCode}`);
     
+    // Add kill to the killer if specified
+    if (killerId && killerId !== playerId) {
+      game.addKill(killerId, playerId);
+    }
+    
     this.io.to(gameCode).emit("playerDefeated", {
       playerId,
-      playerName: defeatedPlayer.name
+      playerName: defeatedPlayer.name,
+      killerId: killerId
     });
 
     // Respawn the defeated player after a short delay
@@ -100,7 +106,7 @@ class GameManager {
     }, 2000); // 2 second respawn delay
   }
 
-  handlePlayerRespawn(gameCode, playerId) {
+  handlePlayerRespawn(gameCode, playerId, retryCount = 0) {
     const game = this.getGame(gameCode);
     if (!game) {
       console.log(`❌ Game ${gameCode} not found for respawn`);
@@ -110,6 +116,28 @@ class GameManager {
     const player = game.getPlayer(playerId);
     if (!player) {
       console.log(`❌ Player ${playerId} not found for respawn`);
+      return;
+    }
+
+    // Prevent infinite recursion
+    if (retryCount > 5) {
+      console.log(`💀 Max retry attempts reached for respawn, using emergency fallback`);
+      const tileWidth = game.mapData.tilewidth || 32;
+      const tileHeight = game.mapData.tileheight || 32;
+      const pixelPosition = {
+        x: tileWidth + tileWidth / 2,
+        y: tileHeight + tileHeight / 2
+      };
+      
+      const respawnedPlayer = game.respawnPlayer(playerId, pixelPosition);
+      if (respawnedPlayer) {
+        this.io.to(gameCode).emit("playerRespawned", {
+          playerId,
+          playerName: respawnedPlayer.name,
+          health: respawnedPlayer.health,
+          position: respawnedPlayer.position
+        });
+      }
       return;
     }
 
@@ -126,7 +154,7 @@ class GameManager {
         };
       });
 
-    console.log(`🎯 Finding respawn position for ${player.name}, avoiding ${existingPlayerPositions.length} existing players`);
+    console.log(`🎯 Finding respawn position for ${player.name}, avoiding ${existingPlayerPositions.length} existing players (retry ${retryCount})`);
 
     // Find a safe spawn position, avoiding existing players AND obstacles
     const spawnPositions = this.mapManager.findValidSpawnPositions(
@@ -142,6 +170,7 @@ class GameManager {
       
       if (tilePosition) {
         spawnPositions.push(tilePosition);
+        console.log(`🆘 Emergency respawn position found at (${tilePosition.x}, ${tilePosition.y})`);
       } else {
         // Ultimate fallback - use a corner position
         const tileWidth = game.mapData.tilewidth || 32;
@@ -186,10 +215,10 @@ class GameManager {
     console.log(`🎯 Respawn position - Tile: (${tilePosition.x}, ${tilePosition.y}) → Pixel: (${pixelPosition.x}, ${pixelPosition.y})`);
 
     // Verify this position is not an obstacle (double-check)
-    const isValid = this.mapManager.isPositionStrictlyValid(game.mapData, tilePosition, []);
+    const isValid = this.mapManager.isPositionStrictlyValid(game.mapData, tilePosition, existingPlayerPositions);
     if (!isValid) {
       console.log(`❌ Respawn position (${tilePosition.x}, ${tilePosition.y}) is invalid, finding alternative`);
-      this.handlePlayerRespawn(gameCode, playerId); // Retry
+      this.handlePlayerRespawn(gameCode, playerId, retryCount + 1); // Retry with incremented count
       return;
     }
 
@@ -353,6 +382,25 @@ class GameManager {
     const game = this.getGame(gameCode);
     if (!game) return;
 
+    // Calculate final scores for all players
+    game.players.forEach(player => {
+      player.stats.score = game.calculateScore(player);
+    });
+
+    // Sort players by score for final ranking
+    const rankedPlayers = game.players.slice().sort((a, b) => {
+      // Primary sort by score (descending)
+      if (b.stats.score !== a.stats.score) return b.stats.score - a.stats.score;
+      
+      // Secondary sort by kills (descending)
+      if (b.stats.kills !== a.stats.kills) return b.stats.kills - a.stats.kills;
+      
+      // Tertiary sort by K/D ratio (descending)
+      const aKDRatio = a.stats.deaths === 0 ? a.stats.kills : a.stats.kills / a.stats.deaths;
+      const bKDRatio = b.stats.deaths === 0 ? b.stats.kills : b.stats.kills / b.stats.deaths;
+      return bKDRatio - aKDRatio;
+    });
+
     game.end(winnerId);
 
     const winnerName = game.getPlayer(winnerId)?.name || "Unknown";
@@ -367,6 +415,15 @@ class GameManager {
       winnerName,
       reason,
       finalState: game.sanitize(),
+      finalRankings: rankedPlayers.map((player, index) => ({
+        rank: index + 1,
+        id: player.id,
+        name: player.name,
+        kills: player.stats.kills,
+        deaths: player.stats.deaths,
+        score: player.stats.score,
+        kdRatio: player.stats.deaths === 0 ? player.stats.kills : (player.stats.kills / player.stats.deaths).toFixed(2)
+      }))
     });
 
     setTimeout(() => {

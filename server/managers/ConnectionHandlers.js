@@ -42,8 +42,8 @@ class ConnectionHandler {
   }
 
   handlePlayerHealthUpdate(socket, data) {
-    const { gameCode, playerId, health } = data;
-    this.gameManager.handlePlayerHealthUpdate(gameCode, playerId, health);
+    const { gameCode, playerId, health, shooterId } = data;
+    this.gameManager.handlePlayerHealthUpdate(gameCode, playerId, health, shooterId);
   }
 
   handlePlayerShoot(socket, data) {

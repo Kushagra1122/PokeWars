@@ -36,6 +36,16 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  balance: {
+    type: Number,
+    default: 1.0,
+    required: true,
+  },
+  experience: {
+    type: Number,
+    default: 0,
+    required: true,
+  },
 });
 
 // Remove sensitive fields when converting to JSON

@@ -13,6 +13,7 @@ import ChatBox from '../components/Game/ChatBox';
 import Leaderboard from '../components/Game/Leaderboard';
 import Timer from '../components/Game/Timer';
 import MainGame from '../components/Game/MainGame';
+import GameOver from '../components/Game/GameOver';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
 
@@ -30,6 +31,7 @@ const Game = () => {
   const [showSettlementModal, setShowSettlementModal] = useState(false);
   const [settlementStatus, setSettlementStatus] = useState('');
   const [settlementTxHash, setSettlementTxHash] = useState('');
+  const [showGameOver, setShowGameOver] = useState(false);
 
   // Convert walletClient to ethers signer (ethers v5 compatible)
   useEffect(() => {
@@ -80,6 +82,7 @@ const Game = () => {
 
     gameSocket.on('gameEnded', (result) => {
       setGameState((prev) => ({ ...prev, status: 'ended', result }));
+      setShowGameOver(true);
     });
 
     gameSocket.on('gameError', (error) => {
@@ -171,6 +174,17 @@ const Game = () => {
   const closeSettlementModal = () => {
     setShowSettlementModal(false);
     // Navigate back to dashboard or lobby
+    window.location.href = '/dashboard';
+  };
+
+  const handlePlayAgain = () => {
+    setShowGameOver(false);
+    // Navigate to battle page to create/join new game
+    window.location.href = '/battle';
+  };
+
+  const handleReturnHome = () => {
+    setShowGameOver(false);
     window.location.href = '/dashboard';
   };
 
@@ -307,6 +321,16 @@ const Game = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Game Over Modal */}
+      {showGameOver && (
+        <GameOver
+          gameState={gameState}
+          user={user}
+          onPlayAgain={handlePlayAgain}
+          onReturnHome={handleReturnHome}
+        />
       )}
     </div>
   );

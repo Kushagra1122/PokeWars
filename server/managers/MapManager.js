@@ -167,12 +167,51 @@ class MapManager {
           y: centerPos.y + dy
         };
 
-        // Skip checking distance requirement for area check
-        if (!this.isPositionStrictlyValid(mapData, checkPos, [])) {
+        // Only check for obstacles, not player proximity for area clearing
+        if (!this.isPositionValidForObstacles(mapData, checkPos)) {
           return false;
         }
       }
     }
+    return true;
+  }
+
+  // Check only for obstacles, not player proximity
+  isPositionValidForObstacles(mapData, position) {
+    // Basic boundary check
+    if (position.x < 0 || position.x >= mapData.width || 
+        position.y < 0 || position.y >= mapData.height) {
+      return false;
+    }
+
+    // Check collision layers only
+    for (const layer of mapData.layers) {
+      // Skip non-tile layers
+      if (layer.type !== "tilelayer" || !layer.data) continue;
+      
+      // Check if this layer should be considered for collision
+      const isCollisionLayer = layer.properties && layer.properties.some(p => 
+        p.name === 'collision' && p.value === true
+      ) || (layer.name && layer.name.toLowerCase().includes('collision'));
+
+      if (isCollisionLayer) {
+        const layerWidth = layer.width || mapData.width;
+        const layerHeight = layer.height || mapData.height;
+
+        if (position.x >= 0 && position.x < layerWidth && 
+            position.y >= 0 && position.y < layerHeight) {
+          
+          const tileIndex = position.y * layerWidth + position.x;
+          const tileId = layer.data[tileIndex];
+
+          // If there's any non-zero tile, it's a collision
+          if (tileId && tileId !== 0 && tileId !== -1) {
+            return false;
+          }
+        }
+      }
+    }
+
     return true;
   }
 

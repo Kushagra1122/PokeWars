@@ -1,12 +1,16 @@
+// SelectPokemon.jsx
 import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
-import { Star, ArrowLeft } from "lucide-react";
+import { Star, ArrowLeft, Zap, Heart, Gauge, Target } from "lucide-react";
 
-const StatRow = ({ label, value }) => (
-  <div className="flex justify-between text-sm md:text-base text-yellow-200">
-    <span>{label}</span>
-    <span className="font-bold">{value}</span>
+const StatRow = ({ label, value, icon: Icon }) => (
+  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
+    <div className="flex items-center gap-2 text-gray-300">
+      <Icon className="w-4 h-4" />
+      <span className="text-sm">{label}</span>
+    </div>
+    <span className="font-bold text-white">{value}</span>
   </div>
 );
 
@@ -21,87 +25,147 @@ const SelectPokemon = () => {
     navigate("/dashboard");
   };
 
+  const statIcons = {
+    shootRange: Target,
+    shootPerMin: Zap,
+    hitPoints: Heart,
+    speed: Gauge
+  };
+
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-blue-800 p-6 md:p-16">
-      
-      {/* Back button */}
-      <button
-        onClick={() => navigate("/dashboard")}
-        className="absolute top-6 left-6 p-3 md:p-4 rounded-full bg-yellow-400 text-blue-900 hover:bg-yellow-300 shadow-md transition-shadow"
-      >
-        <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
-      </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-10 left-10 w-24 h-24 bg-amber-400 rounded-full blur-2xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-20 h-20 bg-blue-400 rounded-full blur-2xl animate-pulse delay-75"></div>
+      </div>
 
-      {/* Title */}
-      <h1
-        className="text-3xl md:text-5xl font-extrabold text-yellow-400 mb-8 md:mb-12 text-center drop-shadow-lg"
-        style={{ fontFamily: "Press Start 2P, cursive" }}
-      >
-        Select Your Pokémon
-      </h1>
+      {/* Header */}
+      <div className="relative z-10">
+        <div className="flex items-center justify-between p-6">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Dashboard
+          </button>
+          
+          <div className="text-right">
+            <div className="text-sm text-gray-400">Currently Selected</div>
+            <div className="text-lg font-bold text-white">
+              {selectedPokemon?.name || 'None'}
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Pokémon Cards */}
-      {pokes.length === 0 ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <p className="text-xl md:text-2xl text-yellow-200 font-bold text-center">
-            You don't have any Pokémon yet. Go to Marketplace or Get First Pokémon.
+      {/* Main Content */}
+      <div className="relative z-10 px-6 py-8">
+        {/* Title */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-6xl font-black text-white mb-4">
+            Choose Your <span className="bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">Champion</span>
+          </h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            Select your Pokémon companion for battle. Each has unique strengths and abilities!
           </p>
         </div>
-      ) : (
-        <div className="flex flex-wrap justify-center gap-6 p-6 md:p-10">
-          {pokes.map((p) => {
-            const pk = p.pokemonId || {};
-            const isSelected =
-              selectedPokemon && String(selectedPokemon._id) === String(p._id);
 
-            return (
-              <div
-                key={p._id}
-                className={`bg-gradient-to-b from-blue-800/70 to-purple-900/70 backdrop-blur-sm rounded-xl p-6 flex flex-col items-center shadow-2xl hover:scale-105 hover:shadow-yellow-400/30 transform transition-all border-2 ${
-                  isSelected ? "border-yellow-400" : "border-yellow-400/30"
-                }`}
-              >
+        {/* Pokémon Grid */}
+        {pokes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+            <div className="w-32 h-32 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
+              <Star className="w-16 h-16 text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">No Pokémon Available</h3>
+            <p className="text-gray-400 mb-8 max-w-md">
+              You haven't acquired any Pokémon yet. Visit the marketplace or get your first Pokémon to start battling!
+            </p>
+            <button
+              onClick={() => navigate('/market-place')}
+              className="px-8 py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 font-bold rounded-xl hover:scale-105 transition-transform duration-300"
+            >
+              Get Your First Pokémon
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {pokes.map((p) => {
+              const pk = p.pokemonId || {};
+              const isSelected = selectedPokemon && String(selectedPokemon._id) === String(p._id);
+
+              return (
                 <div
-                  className="relative mb-4 w-32 h-32 md:w-40 md:h-40 "
-                  style={{
-                    backgroundImage: `url(${pk.sprite || "/characters/noChar.png"})`,
-                    backgroundPosition: "-5px 0px",
-                    backgroundSize: "700px 700px",
-                    backgroundRepeat: "no-repeat",
-                    imageRendering: "pixelated",
-                  }}
-                ></div>
-
-                <div className="text-2xl md:text-3xl font-bold text-yellow-400 mb-2 drop-shadow-lg text-center">
-                  {pk.name}
-                </div>
-
-                <div className="px-4 py-1 bg-yellow-400/20 border border-yellow-400 rounded-full mb-4">
-                  <span className="text-sm font-semibold text-yellow-400 capitalize">{pk.type}</span>
-                </div>
-
-                <div className="w-full bg-blue-900/50 border border-yellow-400/30 rounded-lg p-4 mb-4 space-y-2">
-                  <StatRow label="Shoot Range" value={pk.baseStats?.shootRange ?? "-"} />
-                  <StatRow label="Shoot / min" value={pk.baseStats?.shootPerMin ?? "-"} />
-                  <StatRow label="HP" value={pk.baseStats?.hitPoints ?? "-"} />
-                  <StatRow label="Speed" value={pk.baseStats?.speed ?? "-"} />
-                </div>
-
-                <button
-                  onClick={() => handleSelect(p)}
-                  disabled={isSelected}
-                  className={`flex items-center justify-center gap-2 px-6 py-3 bg-yellow-400 text-blue-900 font-bold rounded-xl hover:bg-yellow-300 w-full transform hover:scale-105 shadow-lg transition-all ${
-                    isSelected ? "bg-yellow-300 cursor-not-allowed" : ""
+                  key={p._id}
+                  className={`group relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-3xl p-6 border-2 transition-all duration-500 hover:scale-105 hover:shadow-2xl ${
+                    isSelected 
+                      ? 'border-amber-400 shadow-amber-400/20' 
+                      : 'border-white/10 hover:border-amber-400/30'
                   }`}
                 >
-                  <Star className="w-5 h-5" />
-                  {isSelected ? "Selected" : "Select This Pokémon"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  {/* Selection Badge */}
+                  {isSelected && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 font-bold rounded-full text-sm shadow-lg">
+                      SELECTED
+                    </div>
+                  )}
+
+                  {/* Pokémon Sprite */}
+                  <div className="relative mb-6 flex justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-400/20 to-yellow-500/20 rounded-full blur-2xl group-hover:blur-3xl transition-all duration-500"></div>
+                    <div
+                      className="relative w-32 h-32 z-10 animate-float"
+                      style={{
+                        backgroundImage: `url(${pk.sprite || "/characters/noChar.png"})`,
+                        backgroundPosition: "-5px 0px",
+                        backgroundSize: "700px 700px",
+                        backgroundRepeat: "no-repeat",
+                        imageRendering: "pixelated",
+                      }}
+                    />
+                  </div>
+
+                  {/* Pokémon Info */}
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-bold text-white mb-2">{pk.name}</h3>
+                    <div className="inline-flex items-center gap-2 px-4 py-1 bg-amber-400/20 border border-amber-400/30 rounded-full">
+                      <span className="text-sm font-semibold text-amber-400 capitalize">{pk.type}</span>
+                      <span className="text-xs text-gray-300">Lvl {p.level}</span>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="space-y-2 mb-6">
+                    {Object.entries(statIcons).map(([key, Icon]) => (
+                      <StatRow
+                        key={key}
+                        label={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                        value={pk.baseStats?.[key] ?? "-"}
+                        icon={Icon}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Select Button */}
+                  <button
+                    onClick={() => handleSelect(p)}
+                    disabled={isSelected}
+                    className={`group w-full py-3 px-4 font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-gray-700 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 hover:scale-105 hover:shadow-lg'
+                    }`}
+                  >
+                    <Star className={`w-5 h-5 ${isSelected ? '' : 'group-hover:scale-110 transition-transform'}`} />
+                    {isSelected ? 'Currently Selected' : 'Select Pokémon'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

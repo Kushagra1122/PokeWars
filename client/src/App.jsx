@@ -12,6 +12,9 @@ import Battle from './pages/Battle';
 import Waiting from './pages/Waiting';
 import MarketPlace from './pages/MarketPlace';
 import Game from './pages/Game';
+import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -29,14 +32,9 @@ function App() {
             <Route path="/battle/lobby/:code" element={<Waiting />} />
             <Route path="/market-place" element={<MarketPlace />} />
             <Route path="/battle/game/:code" element={<Game />} />
-            <Route
-              path="*"
-              element={
-                <div>
-                  404 Not Found. Go to <Link to="/">Home</Link>
-                </div>
-              }
-            />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
       </WalletProviders>

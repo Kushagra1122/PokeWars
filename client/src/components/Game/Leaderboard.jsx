@@ -1,24 +1,23 @@
+// Leaderboard.jsx (Enhanced)
 import React, { useState } from 'react';
+import { Crown, Trophy, Zap, Skull, Heart } from 'lucide-react';
 
 const Leaderboard = ({ gameState, user }) => {
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Sort players by kills, then by health
   const sortedPlayers = gameState?.players?.slice().sort((a, b) => {
+    const aScore = a.stats?.score || 0;
+    const bScore = b.stats?.score || 0;
     const aKills = a.stats?.kills || 0;
     const bKills = b.stats?.kills || 0;
     const aDeaths = a.stats?.deaths || 0;
     const bDeaths = b.stats?.deaths || 0;
     
-    // Primary sort by kills (descending)
+    if (bScore !== aScore) return bScore - aScore;
     if (bKills !== aKills) return bKills - aKills;
-    
-    // Secondary sort by K/D ratio (descending)
     const aKDRatio = aDeaths === 0 ? aKills : aKills / aDeaths;
     const bKDRatio = bDeaths === 0 ? bKills : bKills / bDeaths;
     if (bKDRatio !== aKDRatio) return bKDRatio - aKDRatio;
-    
-    // Tertiary sort by health (descending)
     return (b.health || 0) - (a.health || 0);
   }) || [];
 
@@ -35,82 +34,108 @@ const Leaderboard = ({ gameState, user }) => {
     return (kills / deaths).toFixed(2);
   };
 
-  return (
-    <div className={`bg-gradient-to-b from-black/30 to-black/50 p-4 rounded-xl text-sm flex flex-col backdrop-blur-md border border-yellow-400/20 shadow-lg overflow-y-auto transition-all duration-300 w-1/4 ${
-      isCollapsed ? ' h-auto' : 'h-80'
-    }`}>
+  const getRankIcon = (index) => {
+    if (index === 0) return <Crown className="w-4 h-4 text-yellow-400" />;
+    if (index === 1) return <Trophy className="w-4 h-4 text-gray-400" />;
+    if (index === 2) return <Zap className="w-4 h-4 text-amber-600" />;
+    return <span className="text-xs text-gray-400">#{index + 1}</span>;
+  };
 
+  return (
+    <div className={`bg-white/5 backdrop-blur-sm border border-white/20 rounded-2xl flex flex-col shadow-2xl transition-all duration-300 ${
+      isCollapsed ? 'w-16' : 'w-80'
+    }`}>
+      
+      {/* Header */}
       <div
-        className="flex items-center justify-between mb-3 cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors"
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors duration-300 rounded-t-2xl"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        <div className="flex items-center">
-          <span className="text-xl mr-2">🏆</span>
-          <h2 className="font-bold text-yellow-300 text-lg">Leaderboard</h2>
+        {!isCollapsed && (
+          <div className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-amber-400" />
+            <h2 className="font-bold text-white text-lg">Leaderboard</h2>
+          </div>
+        )}
+        <div className={`w-8 h-8 bg-amber-400/20 border border-amber-400/30 rounded-lg flex items-center justify-center transition-transform duration-300 ${
+          isCollapsed ? 'rotate-180' : ''
+        }`}>
+          <span className="text-amber-400 text-sm">▲</span>
         </div>
-        <span className={`text-yellow-400 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`}>
-          ▲
-        </span>
       </div>
 
       {!isCollapsed && (
-        <>
+        <div className="flex-1 overflow-y-auto space-y-3 p-4 max-h-80 scrollbar-thin scrollbar-thumb-amber-400/30 scrollbar-track-transparent">
           {sortedPlayers.length > 0 ? (
-            <div className="space-y-3">
-              {sortedPlayers.map((player, idx) => (
-                <div key={player.id} className={`p-3 rounded-lg border transition-all duration-200 ${
-                  player.id === user?.id 
-                    ? 'bg-green-900/30 border-green-500/40 shadow-md' 
-                    : player.health <= 0
-                    ? 'bg-red-900/30 border-red-500/40'
-                    : 'bg-gray-800/30 border-gray-600/30'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <span className={`font-bold ${
-                        player.id === user?.id 
-                          ? 'text-green-400' 
-                          : player.health <= 0
-                          ? 'text-red-400'
-                          : 'text-yellow-200'
-                      }`}>
-                        #{idx + 1} {player.name}
-                      </span>
-                      {player.health <= 0 && (
-                        <span className="text-xs text-red-400 bg-red-900/50 px-2 py-1 rounded">
-                          DEAD
-                        </span>
-                      )}
+            sortedPlayers.map((player, idx) => (
+              <div key={player.id} className={`p-3 rounded-xl border-2 transition-all duration-300 ${
+                player.id === user?.id 
+                  ? 'bg-emerald-500/20 border-emerald-400 shadow-lg' 
+                  : player.health <= 0
+                  ? 'bg-rose-500/20 border-rose-400'
+                  : 'bg-white/5 border-white/10'
+              }`}>
+                {/* Player Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 flex items-center justify-center">
+                      {getRankIcon(idx)}
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-400">K/D: {getKDText(player)}</div>
-                      <div className="text-xs text-yellow-400">Ratio: {getKDRatio(player)}</div>
-                    </div>
+                    <span className={`font-bold ${
+                      player.id === user?.id 
+                        ? 'text-emerald-400' 
+                        : player.health <= 0
+                        ? 'text-rose-400'
+                        : 'text-white'
+                    }`}>
+                      {player.name}
+                    </span>
+                    {player.health <= 0 && (
+                      <Skull className="w-3 h-3 text-rose-400" />
+                    )}
                   </div>
-                  
-                  <div className="w-full bg-gray-700/50 rounded-full h-2.5 overflow-hidden mb-2">
-                    <div
-                      className={`h-2.5 rounded-full transition-all duration-500 ${
-                        player.health > 70 ? 'bg-green-500' :
-                        player.health > 30 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${player.health || 0}%` }}
-                    ></div>
-                  </div>
-                  
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span>HP: {player.health || 0}%</span>
-                    <span>Kills: {player.stats?.kills || 0}</span>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-amber-300">{player.stats?.score || 0}</div>
+                    <div className="text-xs text-gray-400">Score</div>
                   </div>
                 </div>
-              ))}
-            </div>
+                
+                {/* Health Bar */}
+                <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden mb-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-500 ${
+                      player.health > 70 ? 'bg-emerald-500' :
+                      player.health > 30 ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${player.health || 0}%` }}
+                  ></div>
+                </div>
+                
+                {/* Stats */}
+                <div className="flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1 text-gray-300">
+                      <Heart className="w-3 h-3" />
+                      {player.health || 0}%
+                    </div>
+                    <div className="text-gray-300">
+                      K/D: {getKDText(player)}
+                    </div>
+                  </div>
+                  <div className="text-amber-400 font-semibold">
+                    Ratio: {getKDRatio(player)}
+                  </div>
+                </div>
+              </div>
+            ))
           ) : (
-            <div className="text-yellow-200/60 text-center py-8">
-              👥 No players yet
+            <div className="text-center py-8">
+              <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">No players yet</p>
+              <p className="text-gray-500 text-xs mt-1">Waiting for players to join...</p>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

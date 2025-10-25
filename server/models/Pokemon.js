@@ -23,6 +23,11 @@ const PokemonSchema = new mongoose.Schema({
   isFirstClaim: {
     type: Boolean,
     default: false
+  },
+  price: {
+    type: Number,
+    required: true,
+    default: 0.5
   }
 });
 

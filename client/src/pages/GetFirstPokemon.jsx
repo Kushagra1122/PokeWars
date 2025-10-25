@@ -1,8 +1,9 @@
+// GetFirstPokemon.jsx
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import AuthContext from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Star, Zap, Heart, Gauge, Target, Sparkles } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
@@ -48,98 +49,144 @@ const GetFirstPokemon = () => {
     }
   };
 
+  const StatRow = ({ label, value, icon: Icon }) => (
+    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
+      <div className="flex items-center gap-2 text-gray-300">
+        <Icon className="w-4 h-4" />
+        <span className="text-sm">{label}</span>
+      </div>
+      <span className="font-bold text-white">{value}</span>
+    </div>
+  );
+
+  const statIcons = {
+    shootRange: Target,
+    shootPerMin: Zap,
+    hitPoints: Heart,
+    speed: Gauge
+  };
+
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-blue-800 p-6 md:p-16">
-      
-      <button
-        onClick={() => navigate("/dashboard")}
-        className="absolute top-6 left-6 p-3 md:p-4 rounded-full bg-yellow-400 text-blue-900 hover:bg-yellow-300 shadow-md transition-shadow"
-      >
-        <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
-      </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-10 left-10 w-24 h-24 bg-amber-400 rounded-full blur-2xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-20 h-20 bg-blue-400 rounded-full blur-2xl animate-pulse delay-75"></div>
+        <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-purple-400 rounded-full blur-2xl animate-pulse delay-150"></div>
+      </div>
 
-      <h1
-        className="text-3xl md:text-5xl font-extrabold text-yellow-400 mb-8 md:mb-12 text-center drop-shadow-lg"
-        style={{ fontFamily: "Press Start 2P, cursive" }}
-      >
-        Choose Your First Pokémon!
-      </h1>
+      {/* Header */}
+      <div className="relative z-10">
+        <div className="flex justify-between items-center p-6">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-xl md:text-2xl text-yellow-400 font-bold animate-pulse">
-            Loading Pokémon...
+      {/* Main Content */}
+      <div className="relative z-10 px-6 py-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl">
+            <Sparkles className="w-10 h-10 text-white" />
           </div>
+          <h1 className="text-4xl md:text-6xl font-black text-white mb-4">
+            Choose Your <span className="bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">Starter</span>
+          </h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            Begin your Pokémon journey by selecting your first companion. Each has unique abilities and strengths!
+          </p>
         </div>
-      ) : error ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-xl md:text-2xl text-red-400 font-bold bg-red-900/30 px-6 py-4 rounded-xl text-center">
-            {error}
-          </div>
-        </div>
-      ) : !pokemon.length ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-xl md:text-2xl text-gray-300 font-bold text-center">
-            No Pokémon available for first claim.
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap justify-center gap-6 p-6 md:p-10">
-          {pokemon.map((p) => (
-            <div
-              key={p._id || p.id}
-              className="bg-gradient-to-b from-blue-800/70 to-purple-900/70 backdrop-blur-sm rounded-xl p-6 flex flex-col items-center shadow-2xl hover:scale-105 hover:shadow-yellow-400/30 transform transition-all duration-300 border-2 border-yellow-400/30"
-            >
-              <div
-                className="relative mb-4 w-32 h-32 md:w-40 md:h-40"
-                style={{
-                  backgroundImage: `url(${p.sprite || "/characters/noChar.png"})`,
-                  backgroundPosition: "-5px 0px",
-                  backgroundSize: "700px 700px",
-                  backgroundRepeat: "no-repeat",
-                  imageRendering: "pixelated",
-                }}
-              ></div>
 
-              <div className="text-2xl md:text-3xl font-bold text-yellow-400 mb-2 drop-shadow-lg text-center">
-                {p.name}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center min-h-[400px]">
+            <div className="w-16 h-16 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div className="text-xl text-amber-400 font-bold">Loading Pokémon...</div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-rose-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-8 h-8 text-rose-400" />
               </div>
-
-              <div className="px-4 py-1 bg-yellow-400/20 border border-yellow-400 rounded-full mb-4">
-                <span className="text-sm font-semibold text-yellow-400 capitalize">{p.type}</span>
-              </div>
-
-              {p.baseStats && (
-                <div className="w-full bg-blue-900/50 border border-yellow-400/30 rounded-lg p-4 mb-4 space-y-2">
-                  {["shootRange", "shootPerMin", "hitPoints", "speed"].map((stat) => (
-                    <div key={stat} className="flex justify-between text-yellow-200 font-semibold">
-                      <span>
-                        {stat === "shootRange"
-                          ? "Shoot Range"
-                          : stat === "shootPerMin"
-                          ? "Shoot / Min"
-                          : stat === "hitPoints"
-                          ? "HP"
-                          : "Speed"}
-                      </span>
-                      <span className="font-bold text-yellow-400">{p.baseStats[stat]}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button
-                onClick={() => claim(p._id)}
-                disabled={!!claimingId}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-yellow-400 text-blue-900 font-bold rounded-xl hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed w-full transform hover:scale-105 shadow-lg transition-all"
-              >
-                <Star className="w-5 h-5" />
-                {claimingId === p._id ? "Claiming..." : "Claim This Pokémon"}
-              </button>
+              <div className="text-xl text-rose-400 font-bold mb-2">Error Loading Pokémon</div>
+              <p className="text-gray-400">{error}</p>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ) : !pokemon.length ? (
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+            <div className="w-32 h-32 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
+              <Star className="w-16 h-16 text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">No Starters Available</h3>
+            <p className="text-gray-400 mb-8 max-w-md">
+              There are currently no starter Pokémon available. Please check back later or contact support.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {pokemon.map((p) => (
+              <div
+                key={p._id || p.id}
+                className="group relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-3xl p-6 border-2 border-amber-400/30 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:border-amber-400/60"
+              >
+                {/* Pokémon Sprite */}
+                <div className="relative mb-6 flex justify-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-400/20 to-yellow-500/20 rounded-full blur-2xl group-hover:blur-3xl transition-all duration-500"></div>
+                  <div
+                    className="relative w-32 h-32 z-10 animate-float"
+                    style={{
+                      backgroundImage: `url(${p.sprite || "/characters/noChar.png"})`,
+                      backgroundPosition: "-5px 0px",
+                      backgroundSize: "700px 700px",
+                      backgroundRepeat: "no-repeat",
+                      imageRendering: "pixelated",
+                    }}
+                  />
+                </div>
+
+                {/* Pokémon Info */}
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-white mb-2">{p.name}</h3>
+                  <div className="inline-flex items-center gap-2 px-4 py-1 bg-amber-400/20 border border-amber-400/30 rounded-full">
+                    <span className="text-sm font-semibold text-amber-400 capitalize">{p.type}</span>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                {p.baseStats && (
+                  <div className="space-y-2 mb-6">
+                    {Object.entries(statIcons).map(([key, Icon]) => (
+                      <StatRow
+                        key={key}
+                        label={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                        value={p.baseStats[key] ?? "-"}
+                        icon={Icon}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Claim Button */}
+                <button
+                  onClick={() => claim(p._id)}
+                  disabled={!!claimingId}
+                  className="group w-full py-4 px-6 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 font-bold rounded-xl hover:scale-105 shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
+                >
+                  <Star className={`w-5 h-5 ${claimingId === p._id ? 'animate-spin' : 'group-hover:scale-110 transition-transform'}`} />
+                  {claimingId === p._id ? "Claiming..." : "Choose This Pokémon"}
+                  <div className="absolute inset-0 rounded-xl border-2 border-white/20 group-hover:border-white/40 transition-colors duration-300"></div>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
