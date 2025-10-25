@@ -7,7 +7,7 @@ export class MatchEscrowService {
   constructor(signer) {
     this.contract = new ethers.Contract(
       CONTRACT_ADDRESS,
-      MatchEscrowABI,
+      MatchEscrowABI.abi,
       signer,
     );
   }

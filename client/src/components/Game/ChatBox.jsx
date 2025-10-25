@@ -4,7 +4,7 @@ import { Send, MessageCircle, Users } from 'lucide-react';
 
 const ChatBox = ({ messages, setMessages, socket, user, gameCode }) => {
   const [newMessage, setNewMessage] = useState('');
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const chatEndRef = useRef(null);
 
   useEffect(() => {

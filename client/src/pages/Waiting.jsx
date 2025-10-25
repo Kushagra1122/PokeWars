@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { ethers } from 'ethers';
 import AuthContext from '../context/AuthContext';
 import PlayersList from '../components/Waiting/PlayerList.jsx';
 import ChatBox from '../components/Waiting/ChatBox.jsx';
@@ -29,6 +30,9 @@ const Waiting = () => {
   });
 
   const [copied, setCopied] = useState(false);
+  const [stakingStatus, setStakingStatus] = useState(null);
+  const [isStaking, setIsStaking] = useState(false);
+  const [contractAddress, setContractAddress] = useState(null);
   const isOwner = lobby?.ownerId === user?.id;
 
   useEffect(() => {
@@ -49,6 +53,18 @@ const Waiting = () => {
     socket.on('message', (msg) => setMessages((prev) => [...prev, msg]));
     socket.on('lobbyError', (msg) => setError(msg));
     socket.on('gameStarting', () => navigate(`/battle/game/${code}`));
+    socket.on('stakeRequired', (data) => {
+      setStakingStatus(data);
+      setContractAddress(data.contractAddress);
+      setMessages((prev) => [...prev, { system: true, text: `💰 ${data.message}` }]);
+    });
+    socket.on('stakingProgress', (data) => {
+      setStakingStatus(prev => ({ ...prev, ...data }));
+      setMessages((prev) => [...prev, { system: true, text: `✅ ${data.stakedPlayer} staked! (${data.playersStaked}/${data.totalPlayers})` }]);
+    });
+    socket.on('playersRemoved', (data) => {
+      setMessages((prev) => [...prev, { system: true, text: `❌ ${data.removedPlayers.join(', ')} ${data.reason}` }]);
+    });
 
     return () => {
       socket.off('lobbyData');
@@ -56,6 +72,9 @@ const Waiting = () => {
       socket.off('message');
       socket.off('lobbyError');
       socket.off('gameStarting');
+      socket.off('stakeRequired');
+      socket.off('stakingProgress');
+      socket.off('playersRemoved');
     };
   }, [code, navigate]);
 
@@ -75,6 +94,52 @@ const Waiting = () => {
     navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleStake = async () => {
+    if (!stakingStatus || isStaking) return;
+    
+    setIsStaking(true);
+    setError('');
+
+    try {
+      // Check if user has wallet connected
+      if (!window.ethereum) {
+        throw new Error('Please connect your wallet first');
+      }
+
+      // Create provider and signer
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      // Convert ETH to Wei
+      const stakeAmountWei = ethers.parseEther(stakingStatus.stakeAmount.toString());
+
+      // Send transaction to the contract address
+      const transaction = await signer.sendTransaction({
+        to: contractAddress || '0x0000000000000000000000000000000000000000',
+        value: stakeAmountWei,
+        gasLimit: 100000, // Higher gas limit for contract interaction
+      });
+
+      const receipt = await transaction.wait();
+      const transactionHash = receipt.hash;
+
+      // Emit stake to server
+      socket.emit('playerStake', {
+        code,
+        playerId: user.id,
+        stakeAmount: stakingStatus.stakeAmount,
+        transactionHash
+      });
+
+      setMessages((prev) => [...prev, { system: true, text: `💰 You staked ${stakingStatus.stakeAmount} ETH!` }]);
+    } catch (error) {
+      console.error('Staking error:', error);
+      setError(`Staking failed: ${error.message}`);
+    } finally {
+      setIsStaking(false);
+    }
   };
 
   if (!lobby) {
@@ -221,6 +286,45 @@ const Waiting = () => {
             </div>
           </div>
         </div>
+
+        {/* Staking Status */}
+        {stakingStatus && (
+          <div className="mt-6 p-6 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/30 rounded-2xl">
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-amber-400 mb-4">💰 Staking Required</h3>
+              <p className="text-amber-200 mb-4">
+                {stakingStatus.message}
+              </p>
+              
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">
+                    {stakingStatus.playersStaked || 0}/{stakingStatus.totalPlayers}
+                  </div>
+                  <div className="text-sm text-amber-200">Players Staked</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">
+                    {(stakingStatus.totalStake || 0).toFixed(3)} ETH
+                  </div>
+                  <div className="text-sm text-amber-200">Total Staked</div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleStake}
+                disabled={isStaking}
+                className={`px-8 py-3 rounded-xl font-bold text-white transition-all duration-300 ${
+                  isStaking
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:scale-105 shadow-lg'
+                }`}
+              >
+                {isStaking ? 'Staking...' : `Stake ${stakingStatus.stakeAmount} ETH`}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (

@@ -14,7 +14,7 @@ class GameManager {
   }
 
   startGame(lobbyData) {
-    const { code, players, gameSettings } = lobbyData;
+    const { code, players, gameSettings, stakingInfo } = lobbyData;
     
     if (this.activeGames.has(code)) {
       console.log(`⚠️ Game ${code} already exists`);
@@ -24,11 +24,14 @@ class GameManager {
     const mapData = this.mapManager.loadMapData(gameSettings?.map || 'snow');
     const spawnPositions = this.mapManager.findValidSpawnPositions(mapData, players.length);
 
-    const game = new Game(code, players, gameSettings, mapData, spawnPositions);
+    const game = new Game(code, players, gameSettings, mapData, spawnPositions, stakingInfo);
     this.activeGames.set(code, game);
 
     console.log(`🎯 Game started for lobby ${code}`);
     console.log(`📍 Spawned ${players.length} players at valid positions`);
+    if (stakingInfo) {
+      console.log(`💰 Total stake pool: ${stakingInfo.totalStake} ETH`);
+    }
 
     // Send game state to each player individually
     players.forEach(player => {

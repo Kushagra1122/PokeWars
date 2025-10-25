@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Crown, Trophy, Zap, Skull, Heart } from 'lucide-react';
 
 const Leaderboard = ({ gameState, user }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const sortedPlayers = gameState?.players?.slice().sort((a, b) => {
     const aScore = a.stats?.score || 0;

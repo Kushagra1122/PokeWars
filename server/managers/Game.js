@@ -1,10 +1,11 @@
 class Game {
-  constructor(code, players, settings, mapData, spawnPositions) {
+  constructor(code, players, settings, mapData, spawnPositions, stakingInfo = null) {
     this.id = code;
     this.code = code;
     this.players = this.initializePlayers(players, spawnPositions);
     this.settings = settings;
     this.mapData = mapData;
+    this.stakingInfo = stakingInfo;
     this.status = "running";
     this.createdAt = Date.now();
     this.endedAt = null;
@@ -154,10 +155,12 @@ class Game {
         position: player.position,
         direction: player.direction,
         isOnline: player.isOnline,
-        isYou: player.id === currentPlayerId
+        isYou: player.id === currentPlayerId,
+        stats: player.stats
       })),
       settings: this.settings,
       mapData: this.mapData,
+      stakingInfo: this.stakingInfo,
       status: this.status,
       createdAt: this.createdAt,
       timeLeft: this.timeLeft,

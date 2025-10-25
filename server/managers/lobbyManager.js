@@ -1,3 +1,5 @@
+const { ethers } = require('ethers');
+
 class LobbyManager {
   constructor(io, gameManager) {
     this.lobbies = new Map();
@@ -99,6 +101,10 @@ class LobbyManager {
 
     socket.on("startGame", (data) => {
       this.startGame(socket, data.code);
+    });
+
+    socket.on("playerStake", (data) => {
+      this.handlePlayerStake(socket, data.code, data.playerId, data.stakeAmount, data.transactionHash);
     });
 
     socket.on("leaveLobby", (data) => {
@@ -220,6 +226,12 @@ startGame(socket, code) {
     return socket.emit("lobbyError", "Please set a stake amount for rated battles");
   }
 
+  // For rated games, collect stakes from all players before starting
+  if (lobby.gameSettings.gameType === "rated") {
+    this.collectStakesFromAllPlayers(lobby, socket);
+    return;
+  }
+
   lobby.status = "starting";
   console.log(`🚀 Game starting for lobby ${code} with ${lobby.players.length} players`);
 
@@ -240,6 +252,152 @@ startGame(socket, code) {
       console.log(`🗑️ Lobby ${code} cleaned up after game start`);
     }
   }, 10000);
+}
+
+// New method to collect stakes from all players
+async collectStakesFromAllPlayers(lobby, socket) {
+  console.log(`💰 Collecting stakes from ${lobby.players.length} players for rated game`);
+  
+  try {
+    // Generate unique game ID for the contract
+    const gameId = ethers.keccak256(
+      ethers.toUtf8Bytes(`${lobby.code}-${Date.now()}`)
+    );
+
+    // Initialize staking status for all players
+    lobby.stakingStatus = {
+      gameId: gameId,
+      totalStake: 0,
+      playersStaked: 0,
+      playerStakes: {},
+      stakeAmount: lobby.gameSettings.stake,
+      contractAddress: process.env.MULTI_PLAYER_ESCROW_ADDRESS || '0x...'
+    };
+
+    // Notify all players to stake
+    this.io.to(lobby.code).emit("stakeRequired", {
+      gameId: gameId,
+      stakeAmount: lobby.gameSettings.stake,
+      totalPlayers: lobby.players.length,
+      contractAddress: lobby.stakingStatus.contractAddress,
+      message: `Please stake ${lobby.gameSettings.stake} ETH to join this rated battle`
+    });
+
+    // Set a timeout for staking (30 seconds)
+    lobby.stakingTimeout = setTimeout(() => {
+      this.handleStakingTimeout(lobby);
+    }, 30000);
+
+    console.log(`⏰ Staking timeout set for lobby ${lobby.code}, gameId: ${gameId}`);
+  } catch (error) {
+    console.error('Error collecting stakes:', error);
+    socket.emit("lobbyError", "Failed to initiate staking process");
+  }
+}
+
+// Handle individual player staking
+async handlePlayerStake(socket, code, playerId, stakeAmount, transactionHash) {
+  const lobby = this.validateLobby(code);
+  if (!lobby) return socket.emit("lobbyError", "Lobby not found");
+
+  if (!lobby.stakingStatus) {
+    return socket.emit("lobbyError", "No staking in progress");
+  }
+
+  const player = lobby.players.find(p => p.id === playerId);
+  if (!player) {
+    return socket.emit("lobbyError", "Player not found in lobby");
+  }
+
+  if (lobby.stakingStatus.playerStakes[playerId]) {
+    return socket.emit("lobbyError", "Already staked");
+  }
+
+  if (stakeAmount !== lobby.stakingStatus.stakeAmount) {
+    return socket.emit("lobbyError", `Incorrect stake amount. Expected: ${lobby.stakingStatus.stakeAmount} ETH`);
+  }
+
+  // Record the stake
+  lobby.stakingStatus.playerStakes[playerId] = {
+    amount: stakeAmount,
+    transactionHash: transactionHash,
+    timestamp: Date.now()
+  };
+  lobby.stakingStatus.playersStaked++;
+  lobby.stakingStatus.totalStake += stakeAmount;
+
+  console.log(`✅ Player ${player.name} staked ${stakeAmount} ETH in lobby ${code}`);
+
+  // Notify all players of staking progress
+  this.io.to(code).emit("stakingProgress", {
+    playersStaked: lobby.stakingStatus.playersStaked,
+    totalPlayers: lobby.players.length,
+    totalStake: lobby.stakingStatus.totalStake,
+    stakedPlayer: player.name
+  });
+
+  // Check if all players have staked
+  if (lobby.stakingStatus.playersStaked === lobby.players.length) {
+    this.startGameAfterStaking(lobby);
+  }
+}
+
+// Start game after all players have staked
+startGameAfterStaking(lobby) {
+  console.log(`🎯 All players staked! Starting rated game for lobby ${lobby.code}`);
+  
+  // Clear staking timeout
+  if (lobby.stakingTimeout) {
+    clearTimeout(lobby.stakingTimeout);
+    lobby.stakingTimeout = null;
+  }
+
+  lobby.status = "starting";
+  
+  // Use GameManager to start the game
+  this.gameManager.startGame(lobby);
+
+  // Notify players that game is starting
+  this.io.to(lobby.code).emit("gameStarting", {
+    lobbyCode: lobby.code,
+    settings: lobby.gameSettings,
+    players: lobby.players,
+    stakingInfo: lobby.stakingStatus
+  });
+
+  // Clean up lobby after game starts
+  setTimeout(() => {
+    if (this.lobbies.has(lobby.code)) {
+      this.lobbies.delete(lobby.code);
+      console.log(`🗑️ Lobby ${lobby.code} cleaned up after game start`);
+    }
+  }, 10000);
+}
+
+// Handle staking timeout
+handleStakingTimeout(lobby) {
+  console.log(`⏰ Staking timeout reached for lobby ${lobby.code}`);
+  
+  const stakedPlayers = Object.keys(lobby.stakingStatus.playerStakes);
+  const unstakedPlayers = lobby.players.filter(p => !stakedPlayers.includes(p.id));
+  
+  if (unstakedPlayers.length > 0) {
+    // Remove unstaked players
+    lobby.players = lobby.players.filter(p => stakedPlayers.includes(p.id));
+    
+    // Notify about removed players
+    this.io.to(lobby.code).emit("playersRemoved", {
+      removedPlayers: unstakedPlayers.map(p => p.name),
+      reason: "Failed to stake in time"
+    });
+  }
+
+  if (lobby.players.length >= 2) {
+    this.startGameAfterStaking(lobby);
+  } else {
+    this.io.to(lobby.code).emit("lobbyError", "Not enough players staked to start the game");
+    lobby.status = "waiting";
+  }
 }
 
   sendMessage(socket, code, message) {
